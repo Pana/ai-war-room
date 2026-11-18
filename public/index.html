@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 作战室</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<script>
+  // 主题：默认跟随系统，手动切换后记住。放在最前面避免闪烁。
+  try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+</script>
+<style>
+  :root {
+    --side: #f3f3f5; --list: #fbfbfc; --read: #ffffff; --text: #16161a; --sub: #44444c; --muted: #7a7a85; --line: #e7e7ec;
+    --hover: #ececf0; --sel: #e3ebff; --sel-line: #2f6bff; --accent: #2f6bff; --eth: #5468e8; --ok: #16a34a; --bad: #dc2626; --chip: #f0f0f3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --side: #111114; --list: #16161a; --read: #1b1b20; --text: #ececf1; --sub: #c9c9d2; --muted: #8b8b96; --line: #2a2a31;
+      --hover: #22222a; --sel: #1d2a4d; --sel-line: #6b95ff; --accent: #7aa0ff; --eth: #9aa6ff; --ok: #4ade80; --bad: #f87171; --chip: #26262e; }
+  }
+  :root[data-theme="dark"] { --side: #111114; --list: #16161a; --read: #1b1b20; --text: #ececf1; --sub: #c9c9d2; --muted: #8b8b96; --line: #2a2a31;
+      --hover: #22222a; --sel: #1d2a4d; --sel-line: #6b95ff; --accent: #7aa0ff; --eth: #9aa6ff; --ok: #4ade80; --bad: #f87171; --chip: #26262e; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; color: var(--text); background: var(--read); overflow: hidden;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .app { display: grid; grid-template-columns: 236px 400px 1fr; height: 100vh; }
+
+  /* ---------- 左：分类 ---------- */
+  .side { background: var(--side); border-right: 1px solid var(--line); overflow-y: auto; padding: 16px 10px 90px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px; font-weight: 700; font-size: 16px; }
+  .brand .logo { width: 28px; height: 28px; border-radius: 7px; display: block; }
+  .nav.view { margin-top: 2px; color: var(--accent); }
+  .theme { margin-left: auto; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--read); cursor: pointer; font-size: 13px; }
+  .side select { width: 100%; margin: 0 0 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--read); }
+  .side .info { padding: 0 8px 10px; font-size: 12px; color: var(--muted); }
+  .grp { margin: 14px 8px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
+  .nav { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; cursor: pointer; text-align: left;
+    padding: 6px 8px; border-radius: 7px; font-size: 14px; color: var(--sub); }
+  .nav:hover { background: var(--hover); }
+  .nav.on { background: var(--sel); color: var(--text); font-weight: 600; }
+  .nav .ic { width: 18px; text-align: center; font-size: 13px; }
+  .nav .ct { margin-left: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .nav.bad .ct { color: var(--bad); }
+
+  /* ---------- 中：列表 ---------- */
+  .list { background: var(--list); border-right: 1px solid var(--line); overflow-y: auto; padding-bottom: 90px; }
+  .lhead { position: sticky; top: 0; z-index: 2; background: color-mix(in srgb, var(--list) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    padding: 18px 18px 10px; border-bottom: 1px solid var(--line); }
+  .lhead h2 { margin: 0; font-size: 19px; letter-spacing: -.01em; }
+  .lhead p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+  .it { display: flex; gap: 12px; width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; cursor: pointer; text-align: left;
+    padding: 12px 18px 12px 15px; border-left: 3px solid transparent; }
+  .it:hover { background: var(--hover); }
+  .it.on { background: var(--sel); border-left-color: var(--sel-line); }
+  .it .th { flex: none; width: 64px; height: 64px; border-radius: 9px; object-fit: cover; background: var(--chip); }
+  .it .bd { flex: 1; min-width: 0; }
+  .it .tt { font-size: 14.5px; font-weight: 600; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .it .mt { margin-top: 4px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .it .mv { flex: none; align-self: center; text-align: right; font-size: 14px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .it .mv small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }
+  .it .rk { flex: none; width: 20px; padding-top: 1px; font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .it.on .rk { color: var(--sel-line); }
+
+  /* ---------- 右：阅读 ---------- */
+  .read { overflow-y: auto; background: var(--read); }
+  .article { max-width: 760px; margin: 0 auto; padding: 36px 44px 110px; }
+  .btn.back { display: none; }
+  .hero { width: 100%; max-height: 400px; aspect-ratio: 1.91; object-fit: cover; border-radius: 14px; background: var(--chip); margin-bottom: 24px; }
+  .kick { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .kick.eth { color: var(--eth); }
+  .article h1 { margin: 8px 0 0; font-size: 30px; line-height: 1.3; letter-spacing: -.02em; overflow-wrap: anywhere; }
+  .orig { margin-top: 6px; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+  .when { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .body { margin-top: 22px; font-size: 17px; line-height: 1.85; color: var(--sub); white-space: pre-line; overflow-wrap: anywhere; }
+  .chips { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12.5px; padding: 2px 10px; border-radius: 999px; background: var(--chip); color: var(--sub); white-space: nowrap; }
+  a.chip:hover { color: var(--accent); }
+  .actions { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    border: 1px solid var(--line); background: var(--read); cursor: pointer; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+  .btn:hover { filter: brightness(.97); }
+  .rel { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 18px; }
+  .rel h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: .06em; }
+  .rel a { display: block; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+  .rel a:hover { color: var(--accent); }
+  .rel a b { font-weight: 600; margin-right: 8px; }
+  .hint { margin-top: 34px; font-size: 12.5px; color: var(--muted); }
+  kbd { font: 11.5px ui-monospace, Menlo, monospace; padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--chip); }
+  .empty { padding: 40px 20px; color: var(--muted); text-align: center; }
+  .notice { margin: 10px 8px 0; padding: 8px 10px; border-radius: 8px; font-size: 12px; color: #b45309; background: color-mix(in srgb, #f59e0b 14%, transparent); }
+
+  @media (max-width: 1100px) { .app { grid-template-columns: 200px 340px 1fr; } .article { padding: 28px 28px 110px; } }
+  @media (max-width: 820px) {
+    body { overflow: auto; }
+    .app { display: block; height: auto; }
+    .side { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+    .side .brand, .side .info, .side .grp, .side .notice { display: none; }
+    .side select { width: auto; margin: 0; flex: none; }
+    .nav { width: auto; flex: none; white-space: nowrap; }
+    .nav .ic { display: none; }
+    .list { border-right: 0; overflow: visible; }
+    .lhead { position: static; }
+    .read { position: fixed; inset: 0; z-index: 20; transform: translateX(100%); transition: transform .22s ease; }
+    body.reading .read { transform: none; }
+    .btn.back { display: inline-flex; margin-bottom: 16px; }
+    .article { padding: 18px 18px 110px; } .article h1 { font-size: 24px; } .body { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <section class="list" id="list"></section>
+  <section class="read" id="read"></section>
+</div>
+<script>
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') n.className = v;
+    else if (k === 'href') {
+      if (/^https?:\/\//i.test(v)) { n.href = v; n.target = '_blank'; n.rel = 'noopener noreferrer'; }
+      else if (/^\/(?!\/)/.test(v)) n.href = v; // 站内页面
+    }
+    else if (k === 'src') { if (/^https:\/\//i.test(v) || /^\/(?!\/)/.test(v)) n.src = v; }
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const k of kids.flat(3)) if (k != null && k !== false) n.append(k);
+  return n;
+}
+// 第三方图片：不带来源页信息（有的图床会因此拒绝），加载失败就移除
+const img = (src, cls) => src ? el('img', { class: cls, src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', onerror: (e) => e.target.remove() }) : null;
+const compact = new Intl.NumberFormat('zh-CN', { notation: 'compact', maximumFractionDigits: 1 });
+const fmt = (n) => (n == null || n === '' ? null : compact.format(Number(n)));
+function ago(iso) {
+  if (!iso) return '';
+  const h = (Date.now() - new Date(iso).getTime()) / 3600e3;
+  if (h < 0) return -h < 24 ? Math.ceil(-h) + ' 小时后' : Math.round(-h / 24) + ' 天后';
+  if (h < 1) return '刚刚'; if (h < 24) return Math.floor(h) + ' 小时前'; if (h < 336) return Math.floor(h / 24) + ' 天前';
+  return new Date(iso).toLocaleDateString('zh-CN');
+}
+
+/* ---------- 把各类数据整理成统一的条目 ---------- */
+function fromItem(it, o) {
+  o = o || {};
+  const zh = it.titleZh && it.titleZh !== it.title;
+  return {
+    title: zh ? it.titleZh : it.title, orig: zh ? it.title : null, summary: it.summaryZh || it.text || '',
+    url: it.url, source: it.source, when: it.publishedAt, image: it.image, metric: o.metric, chips: (o.chips || []).filter(Boolean),
+    eth: o.eth, extraLinks: o.links || [],
+  };
+}
+function fromTop(n, eth) {
+  return { title: n.title, summary: n.summary, url: n.links[0] && n.links[0].url, source: n.links.map((l) => l.source).join(' · '),
+    image: n.image, links: n.links, rank: n.rank, eth, chips: [] };
+}
+const m = (v, l) => (v == null ? null : { v, l });
+
+function buildSections(r) {
+  const e = r.ethereum || { top: [], calls: [], research: [], eips: [], releases: [], news: [] };
+  const p = r.products, g = r.github;
+  const ranks = (x) => [x.appleRank && 'Apple 科技榜 #' + x.appleRank, x.spotifyRank && 'Spotify 科技榜 #' + x.spotifyRank];
+  return [
+    { grp: '今日' },
+    { id: 'top', ic: '★', name: '十大要闻', desc: '多来源合并，按重要性排序', items: r.topNews.map((n) => fromTop(n)) },
+    { grp: 'AI' },
+    { id: 'news', ic: '◎', name: 'AI 新闻', desc: '按热度', items: r.news.map((it) => fromItem(it, {
+      metric: it.metrics && it.metrics.points ? m(fmt(it.metrics.points), 'HN 分') : null,
+      chips: [it.extra && it.extra.via, it.metrics && it.metrics.comments && it.metrics.comments + ' 条评论'] })) },
+    { id: 'official', ic: '✦', name: '官方博客', desc: 'OpenAI · Anthropic · Google', items: r.official.map((it) => fromItem(it, { chips: [it.isNew && '新'] })) },
+    { id: 'ph', ic: '◆', name: 'Product Hunt', desc: 'AI 相关新品', items: p.productHunt.map((it) => fromItem(it)) },
+    { id: 'showhn', ic: '▲', name: 'Show HN', desc: '近 48 小时', items: p.showHn.map((it) => fromItem(it, {
+      metric: m(fmt(it.metrics.points), 'HN 分'), chips: [it.metrics.comments + ' 条评论'], links: [['HN 讨论', it.extra && it.extra.discussion]] })) },
+    { id: 'hf', ic: '🤗', name: 'Hugging Face', desc: '热门模型与 Spaces', items: [...p.hfModels, ...p.hfSpaces].map((it) => fromItem(it, {
+      metric: m(fmt(it.metrics.trending), '热度'), chips: [it.source, it.metrics.tag, '♥ ' + fmt(it.metrics.likes), it.metrics.downloads && '下载 ' + fmt(it.metrics.downloads)] })) },
+    { id: 'gh', ic: '⌥', name: 'GitHub 今日', desc: '24 小时新增 star', items: g.daily.map((it) => fromItem(it, {
+      metric: m('+' + fmt(it.metrics.gained), '今日 star'), chips: ['★ ' + fmt(it.metrics.stars), it.metrics.language, it.metrics.growthPct != null && '增速 ' + it.metrics.growthPct + '%'] })) },
+    { id: 'ghw', ic: '⌥', name: 'GitHub 本周', desc: '7 天新增 star', items: g.weekly.map((it) => fromItem(it, {
+      metric: m('+' + fmt(it.metrics.gained), '本周 star'), chips: ['★ ' + fmt(it.metrics.stars), it.metrics.language] })) },
+    { id: 'ghn', ic: '⌥', name: 'GitHub 新项目', desc: '近 30 天创建', items: g.fresh.map((it) => fromItem(it, {
+      metric: m(fmt(it.metrics.stars), '总 star'), chips: ['日均 +' + fmt(it.metrics.starsPerDay), '创建 ' + it.metrics.ageDays + ' 天', it.metrics.language] })) },
+    { id: 'pod', ic: '◉', name: 'Podcast', desc: '近 7 天 AI 单集，按观看数', items: r.podcasts.episodes.map((it) => fromItem(it, {
+      metric: it.metrics.views != null ? m(fmt(it.metrics.views), '次观看') : null,
+      chips: [...ranks(it.metrics), it.metrics.minutes && it.metrics.minutes + ' 分钟'], links: [['YouTube', it.extra && it.extra.youtubeUrl]] })) },
+    { grp: '以太坊' },
+    { id: 'etop', ic: 'Ξ', name: '生态要闻', desc: '合并排序', items: e.top.map((n) => fromTop(n, true)) },
+    { id: 'calls', ic: '☰', name: '核心开发者会议', desc: 'ACDE · ACDC · ACDT', items: e.calls.map((it) => fromItem(it, { eth: true,
+      chips: [it.extra && it.extra.upcoming ? '即将召开' : '已召开', it.extra && it.extra.stage === 'tldr' && '有会议要点'], links: [['论坛帖', it.extra && it.extra.forumUrl]] })) },
+    { id: 'research', ic: '✎', name: '研究热帖', desc: 'Magicians · ethresear.ch', items: e.research.map((it) => fromItem(it, { eth: true,
+      metric: m(fmt(it.metrics.views), '浏览'), chips: [it.metrics.replies + ' 回复'] })) },
+    { id: 'eips', ic: '§', name: 'EIP 动态', desc: '近 7 天有改动', items: e.eips.map((it) => fromItem(it, { eth: true, links: [['提交记录', it.extra && it.extra.commitUrl]] })) },
+    { id: 'rel', ic: '⇪', name: '客户端发布', desc: '近 14 天', items: e.releases.map((it) => fromItem(it, { eth: true, chips: [it.extra && it.extra.layer] })) },
+    { id: 'enews', ic: '◎', name: '生态新闻', desc: '按时间', items: e.news.map((it) => fromItem(it, { eth: true })) },
+    { grp: '系统' },
+    { id: 'src', ic: '⚙', name: '数据源', desc: '本次采集结果', bad: r.sources.some((s) => !s.ok), items: r.sources.map((s) => ({
+      title: s.source, summary: s.ok ? '采集成功，取到 ' + s.count + ' 条。' : '采集失败：' + (s.error || '未知错误'), source: s.ok ? '成功' : '失败',
+      metric: m(String(s.count), '条'), chips: ['耗时 ' + (s.ms / 1000).toFixed(1) + ' 秒'] })) },
+  ];
+}
+
+/* ---------- 渲染 ---------- */
+let report, dates, sections, cur = { sec: 'top', idx: 0 };
+
+function renderSide() {
+  const sel = el('select', { 'aria-label': '选择日期', onchange: (ev) => load(ev.target.value) }, dates.map((d) => el('option', { value: d }, d)));
+  sel.value = report.date;
+  const ok = report.sources.filter((s) => s.ok).length;
+  document.getElementById('side').replaceChildren(...[
+    el('div', { class: 'brand' }, el('img', { class: 'logo', src: '/logo.svg', alt: '' }), 'AI 作战室',
+      el('button', { class: 'theme', 'aria-label': '切换深色或浅色', title: '切换深色 / 浅色', onclick: toggleTheme }, '◐')),
+    sel,
+    el('div', { class: 'info' }, '生成于 ' + new Date(report.generatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) +
+      ' · ' + ok + '/' + report.sources.length + ' 源' + (report.llm.configured ? ' · ' + report.llm.model : '')),
+    el('a', { class: 'nav view', href: '/daily' }, el('span', { class: 'ic' }, '▤'), '切换到日报视图', el('span', { class: 'ct' }, '→')),
+    !report.llm.configured && el('div', { class: 'notice' }, '未接入 LLM，标题与摘要为原文'),
+    sections.map((s) => s.grp ? el('div', { class: 'grp' }, s.grp) :
+      el('button', { class: 'nav' + (s.id === cur.sec ? ' on' : '') + (s.bad ? ' bad' : ''), onclick: () => select(s.id, 0, true) },
+        el('span', { class: 'ic' }, s.ic), s.name, el('span', { class: 'ct' }, String(s.items.length))))].flat(3).filter(Boolean));
+}
+
+function renderList(sec) {
+  const list = document.getElementById('list');
+  list.replaceChildren(...[
+    el('div', { class: 'lhead' }, el('h2', {}, sec.name), el('p', {}, sec.desc + ' · ' + sec.items.length + ' 条')),
+    sec.items.length ? sec.items.map((x, i) => el('button', { class: 'it' + (i === cur.idx ? ' on' : ''), 'data-i': i, onclick: () => select(sec.id, i, false, true) },
+      x.rank != null && el('span', { class: 'rk' }, String(x.rank)),
+      img(x.image, 'th'),
+      el('div', { class: 'bd' }, el('div', { class: 'tt' }, x.title), el('div', { class: 'mt' }, [x.source, ago(x.when)].filter(Boolean).join(' · '))),
+      x.metric && el('div', { class: 'mv' }, x.metric.v, el('small', {}, x.metric.l)))) : el('div', { class: 'empty' }, '今天没有内容')].flat(3).filter(Boolean));
+}
+
+function renderReader(sec) {
+  const x = sec.items[cur.idx];
+  const read = document.getElementById('read');
+  if (!x) { read.replaceChildren(el('div', { class: 'empty' }, '这个分类今天没有内容')); return; }
+  read.replaceChildren(el('article', { class: 'article' },
+    el('button', { class: 'btn back', onclick: () => document.body.classList.remove('reading') }, '← 返回列表'),
+    img(x.image, 'hero'),
+    el('div', { class: 'kick' + (x.eth ? ' eth' : '') }, sec.name + (x.source ? ' · ' + x.source : '')),
+    el('h1', {}, x.title),
+    x.orig && el('div', { class: 'orig' }, x.orig),
+    x.when && el('div', { class: 'when' }, new Date(x.when).toLocaleString('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) + ' · ' + ago(x.when)),
+    x.summary && el('div', { class: 'body' }, x.summary),
+    (x.chips.length || x.metric) && el('div', { class: 'chips' }, x.metric && el('span', { class: 'chip' }, x.metric.v + ' ' + x.metric.l), x.chips.map((c) => el('span', { class: 'chip' }, c))),
+    el('div', { class: 'actions' },
+      x.url && el('a', { class: 'btn primary', href: x.url }, '阅读原文 ↗'),
+      (x.extraLinks || []).filter((l) => l[1]).map((l) => el('a', { class: 'btn', href: l[1] }, l[0] + ' ↗'))),
+    x.links && x.links.length > 1 && el('div', { class: 'rel' }, el('h3', {}, '相关报道 · ' + x.links.length + ' 篇'),
+      x.links.map((l) => el('a', { href: l.url }, el('b', {}, l.source + (l.points ? ' · ' + l.points + ' 分' : '')), l.title))),
+    el('div', { class: 'hint' }, el('kbd', {}, 'J'), ' / ', el('kbd', {}, 'K'), ' 下一条 / 上一条　', el('kbd', {}, 'O'), ' 打开原文　', el('kbd', {}, '[ ]'), ' 切换分类')));
+  read.scrollTop = 0;
+}
+
+function select(secId, idx, fromNav, open) {
+  const sec = sections.find((s) => s.id === secId) || sections.find((s) => s.id);
+  cur = { sec: sec.id, idx: Math.max(0, Math.min(idx, sec.items.length - 1)) };
+  history.replaceState(null, '', location.search + '#' + cur.sec + '/' + cur.idx);
+  renderSide(); renderList(sec); renderReader(sec);
+  if (fromNav) document.getElementById('list').scrollTop = 0;
+  const on = document.querySelector('.it.on');
+  if (on && !fromNav) on.scrollIntoView({ block: 'nearest' });
+  if (open) document.body.classList.add('reading');
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem('theme', root.dataset.theme); } catch {}
+}
+
+addEventListener('keydown', (ev) => {
+  if (!report || ev.metaKey || ev.ctrlKey || ev.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
+  const navs = sections.filter((s) => s.id);
+  const sec = navs.find((s) => s.id === cur.sec);
+  const k = ev.key.toLowerCase();
+  if (k === 'j' || ev.key === 'ArrowDown') { ev.preventDefault(); select(cur.sec, cur.idx + 1); }
+  else if (k === 'k' || ev.key === 'ArrowUp') { ev.preventDefault(); select(cur.sec, cur.idx - 1); }
+  else if (k === ']' || k === '[') { const i = navs.indexOf(sec) + (k === ']' ? 1 : -1); select(navs[(i + navs.length) % navs.length].id, 0, true); }
+  else if (k === 'o') { const x = sec.items[cur.idx]; if (x && x.url) window.open(x.url, '_blank', 'noopener'); }
+  else if (ev.key === 'Escape') document.body.classList.remove('reading');
+});
+
+async function load(date) {
+  report = await (await fetch('/api/report/' + date)).json();
+  sections = buildSections(report);
+  const [s, i] = location.hash.slice(1).split('/');
+  select(s || 'top', Number(i) || 0, true);
+}
+(async () => {
+  dates = await (await fetch('/api/dates')).json();
+  if (!dates.length) {
+    document.getElementById('list').replaceChildren(el('div', { class: 'empty' }, '还没有数据。先在终端运行 npm run collect。'));
+    return;
+  }
+  load(dates[0]);
+})();
+</script>
+</body>
+</html>

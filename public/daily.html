@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 作战室 · 日报</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<script>
+  // 主题：和阅读器视图共用同一个设置
+  try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+</script>
+<!-- 日报视图：一页读完，像报纸一样分版。阅读器视图见 index.html。 -->
+<style>
+  :root {
+    --paper: #f6f2e9; --ink: #1b1a17; --ink2: #3b3934; --muted: #77726a; --rule: #1b1a17; --hair: #d8d1c2;
+    --red: #b3261e; --blue: #2f4fb3; --tint: #ece6d8;
+    --serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "STSong", Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --paper: #15140f; --ink: #ece7dc; --ink2: #cfc9bc; --muted: #948d80; --rule: #ece7dc; --hair: #36332c;
+      --red: #ff7b6e; --blue: #93a8ff; --tint: #211f19; }
+  }
+  :root[data-theme="dark"] { --paper: #15140f; --ink: #ece7dc; --ink2: #cfc9bc; --muted: #948d80; --rule: #ece7dc; --hair: #36332c;
+    --red: #ff7b6e; --blue: #93a8ff; --tint: #211f19; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.7 var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .page { max-width: 1240px; margin: 0 auto; padding: 0 28px 60px; }
+
+  /* ---------- 报头 ---------- */
+  .mast { text-align: center; padding: 28px 0 0; }
+  .mast .top { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--muted);
+    border-bottom: 1px solid var(--hair); padding-bottom: 10px; gap: 12px; flex-wrap: wrap; }
+  .mast .top .tools { display: flex; gap: 8px; align-items: center; }
+  .mast select, .mast button { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--hair); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+  .mast .view { color: var(--blue); font-weight: 600; }
+  .mast h1 { margin: 14px 0 4px; font: 900 76px/1 var(--serif); letter-spacing: .06em; }
+  .mast h1 .mlogo { height: .82em; width: .82em; vertical-align: -.06em; margin-right: .22em; border-radius: .2em; }
+  .mast .motto { font: italic 14px/1.4 var(--serif); color: var(--muted); letter-spacing: .1em; }
+  .dateline { margin-top: 16px; border-top: 3px double var(--rule); border-bottom: 1px solid var(--rule); padding: 7px 0;
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; font-weight: 600; letter-spacing: .04em; }
+  .sections { display: flex; justify-content: center; gap: 4px 22px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--hair);
+    font: 600 14px/1.4 var(--serif); }
+  .sections a { color: var(--ink2); }
+  .notice { margin: 16px 0 0; font-size: 13.5px; color: var(--red); text-align: center; font-style: italic; }
+
+  /* ---------- 头版 ---------- */
+  .front { display: grid; grid-template-columns: 2fr 1fr; gap: 0 36px; padding: 28px 0 8px; border-bottom: 3px double var(--rule); }
+  .lead .kicker { font: 700 12.5px/1 var(--sans); letter-spacing: .14em; color: var(--red); }
+  .lead h2 { margin: 12px 0 0; font: 900 52px/1.15 var(--serif); letter-spacing: -.01em; overflow-wrap: anywhere; }
+  .lead .dek { margin: 18px 0 0; font: 400 20px/1.7 var(--serif); color: var(--ink2); }
+  .src { margin-top: 14px; font-size: 13px; color: var(--muted); }
+  .src a { color: var(--ink2); font-weight: 600; }
+  .src a + a::before { content: ' · '; color: var(--muted); font-weight: 400; }
+  .brief { border-left: 1px solid var(--hair); padding-left: 28px; }
+  .brief h3, .boxhead { margin: 0 0 6px; font: 700 13px/1.3 var(--sans); letter-spacing: .14em; color: var(--muted);
+    border-bottom: 2px solid var(--rule); padding-bottom: 6px; }
+  .brief article { padding: 12px 0; border-bottom: 1px solid var(--hair); }
+  .brief article:last-child { border-bottom: 0; }
+  .brief .no { font: 700 13px var(--serif); color: var(--red); margin-right: 6px; }
+  .brief h4 { display: inline; font: 700 18px/1.45 var(--serif); }
+  .brief p { margin: 4px 0 0; font-size: 14.5px; color: var(--ink2); }
+  .row3 { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 28px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--rule); }
+  .row3 article { padding-bottom: 18px; }
+  .row3 article + article { border-left: 1px solid var(--hair); padding-left: 28px; }
+  .row3 h4 { margin: 0; font: 700 19px/1.45 var(--serif); }
+  .row3 p { margin: 6px 0 0; font-size: 14.5px; color: var(--ink2); }
+
+  /* ---------- 配图 ---------- */
+  .photo { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; margin: 20px 0 0; background: var(--tint); }
+  .cap { font-size: 12px; color: var(--muted); margin-top: 6px; font-style: italic; }
+  .sm { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; margin-bottom: 10px; background: var(--tint); }
+
+  /* ---------- 分版 ---------- */
+  section.desk { padding: 34px 0 10px; border-bottom: 3px double var(--rule); scroll-margin-top: 12px; }
+  .deskhead { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+  .deskhead h2 { margin: 0; font: 900 34px/1.1 var(--serif); }
+  .deskhead span { font: 600 12px/1 var(--sans); letter-spacing: .2em; color: var(--muted); }
+  .deskhead em { margin-left: auto; font: italic 13.5px var(--serif); color: var(--muted); }
+
+  .cols { column-count: 3; column-gap: 32px; column-rule: 1px solid var(--hair); }
+  .cols > * { break-inside: avoid; }
+  .story { padding: 0 0 16px; margin-bottom: 16px; border-bottom: 1px solid var(--hair); }
+  .story h4 { margin: 0; font: 700 18px/1.45 var(--serif); overflow-wrap: anywhere; }
+  .story p { margin: 6px 0 0; font-size: 14.5px; line-height: 1.7; color: var(--ink2); overflow-wrap: anywhere; }
+  .story .by { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  .story .by b { color: var(--ink2); font-weight: 600; }
+  .fig { font: 700 15px var(--serif); color: var(--red); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; }
+  .grid2 > div + div { border-left: 1px solid var(--hair); padding-left: 36px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 32px; }
+  .grid3 > div + div { border-left: 1px solid var(--hair); padding-left: 32px; }
+
+  /* 榜单：报纸行情表版式 */
+  table.board { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .board td { padding: 9px 6px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  .board td.n { width: 30px; font: 700 15px var(--serif); color: var(--muted); }
+  .board td.v { text-align: right; white-space: nowrap; font: 700 16px var(--serif); color: var(--red); font-variant-numeric: tabular-nums; }
+  .board td.v small { display: block; font: 400 11.5px var(--sans); color: var(--muted); }
+  .board .nm { font: 700 15.5px/1.4 var(--serif); overflow-wrap: anywhere; }
+  .board .ds { font-size: 13px; color: var(--ink2); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* 以太坊：会议纪要放进带框的专栏 */
+  .boxed { border: 2px solid var(--rule); padding: 18px 22px; background: var(--tint); margin-bottom: 22px; }
+  .boxed .boxhead { color: var(--blue); border-color: var(--blue); }
+  .boxed h4 { margin: 8px 0 6px; font: 900 24px/1.35 var(--serif); }
+  .boxed ul { margin: 8px 0 0; padding-left: 20px; font: 400 16px/1.75 var(--serif); color: var(--ink2); }
+  .boxed .meta { font-size: 12.5px; color: var(--muted); }
+  .tag { display: inline-block; font: 700 11px/1.6 var(--sans); letter-spacing: .08em; padding: 0 6px; border: 1px solid currentColor; margin-right: 6px; vertical-align: 2px; }
+  .tag.blue { color: var(--blue); } .tag.red { color: var(--red); }
+
+  footer { padding: 26px 0; font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.9; }
+  footer b { color: var(--ink2); }
+  footer .bad { color: var(--red); }
+  .empty { padding: 60px 0; text-align: center; color: var(--muted); font: italic 18px var(--serif); }
+
+  @media (max-width: 980px) {
+    .front { grid-template-columns: 1fr; } .brief { border-left: 0; padding-left: 0; margin-top: 22px; }
+    .cols { column-count: 2; } .grid3 { grid-template-columns: 1fr 1fr; } .grid3 > div:nth-child(3) { border-left: 0; padding-left: 0; }
+    .lead h2 { font-size: 40px; } .mast h1 { font-size: 58px; }
+  }
+  @media (max-width: 640px) {
+    .page { padding: 0 16px 40px; }
+    .mast h1 { font-size: 44px; } .lead h2 { font-size: 30px; } .lead .dek { font-size: 17px; }
+    .cols { column-count: 1; } .row3, .grid2, .grid3 { grid-template-columns: 1fr; }
+    .row3 article + article, .grid2 > div + div, .grid3 > div + div { border-left: 0; padding-left: 0; }
+    .deskhead h2 { font-size: 28px; } .deskhead em { margin-left: 0; flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="page" id="page"></div>
+<script>
+// 所有内容都来自外部网站，一律用 textContent 写入，不拼 HTML。
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') n.className = v;
+    else if (k === 'href') {
+      if (/^https?:\/\//i.test(v)) { n.href = v; n.target = '_blank'; n.rel = 'noopener noreferrer'; }
+      else if (v[0] === '#' || /^\/(?!\/)/.test(v)) n.href = v;
+    }
+    else if (k === 'src') { if (/^https:\/\//i.test(v) || /^\/(?!\/)/.test(v)) n.src = v; }
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const k of kids.flat(3)) if (k != null && k !== false) n.append(k);
+  return n;
+}
+// 第三方图片：不带来源页信息（有的图床会因此拒绝），加载失败就移除
+const img = (src, cls) => src ? el('img', { class: cls, src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', onerror: (e) => e.target.remove() }) : null;
+const compact = new Intl.NumberFormat('zh-CN', { notation: 'compact', maximumFractionDigits: 1 });
+const fmt = (n) => (n == null || n === '' ? null : compact.format(Number(n)));
+function ago(iso) {
+  if (!iso) return '';
+  const h = (Date.now() - new Date(iso).getTime()) / 3600e3;
+  if (h < 0) return -h < 24 ? Math.ceil(-h) + ' 小时后' : Math.round(-h / 24) + ' 天后';
+  if (h < 1) return '刚刚'; if (h < 24) return Math.floor(h) + ' 小时前'; if (h < 336) return Math.floor(h / 24) + ' 天前';
+  return new Date(iso).toLocaleDateString('zh-CN');
+}
+const zh = (it) => it.titleZh || it.title;
+const sum = (it) => it.summaryZh || it.text || '';
+const clip = (s, n) => (s && n && s.length > n ? s.slice(0, n - 1) + '…' : s);
+const bullets = (s) => (s || '').split('\n').map((x) => x.replace(/^[•\-\s]+/, '').trim())
+  .filter((x) => x && !/^(decisions|highlights|action items|targets):$/i.test(x));
+
+function story(it, by, opts) {
+  opts = opts || {};
+  return el('article', { class: 'story' },
+    opts.img !== false && img(it.image, 'sm'),
+    el('h4', {}, el('a', { href: it.url }, zh(it))),
+    opts.clip !== 0 && sum(it) && el('p', {}, clip(sum(it), opts.clip || 140)),
+    el('div', { class: 'by' }, by));
+}
+function board(items, value, label, desc) {
+  return el('table', { class: 'board' }, items.map((it, i) => el('tr', {},
+    el('td', { class: 'n' }, String(i + 1)),
+    el('td', {}, el('div', { class: 'nm' }, el('a', { href: it.url }, zh(it))), desc && desc(it) && el('div', { class: 'ds' }, desc(it))),
+    el('td', { class: 'v' }, value(it), el('small', {}, label)))));
+}
+function desk(id, name, en, note, ...body) {
+  return el('section', { class: 'desk', id },
+    el('div', { class: 'deskhead' }, el('h2', {}, name), el('span', {}, en), note && el('em', {}, note)), ...body);
+}
+function toggleTheme() {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem('theme', root.dataset.theme); } catch {}
+}
+
+function render(r, dates) {
+  const e = r.ethereum || { top: [], calls: [], research: [], eips: [], releases: [], news: [] };
+  const d = new Date(r.date + 'T12:00:00');
+  const issue = Math.max(1, Math.round((d - new Date('2026-11-18T12:00:00')) / 864e5) + 1);
+  const [lead, ...restTop] = r.topNews;
+  const sel = el('select', { 'aria-label': '选择日期', onchange: (ev) => load(ev.target.value, dates) }, dates.map((x) => el('option', { value: x }, x)));
+  sel.value = r.date;
+  const ok = r.sources.filter((s) => s.ok).length;
+  const done = e.calls.filter((c) => !(c.extra && c.extra.upcoming));
+  const callLead = done[0];
+  const upcoming = e.calls.filter((c) => c.extra && c.extra.upcoming);
+
+  return [
+    el('header', { class: 'mast' },
+      el('div', { class: 'top' },
+        el('a', { class: 'view', href: '/' }, '← 阅读器视图'),
+        el('div', { class: 'tools' }, sel, el('button', { 'aria-label': '切换深色或浅色', title: '切换深色 / 浅色', onclick: toggleTheme }, '◐')),
+        el('span', {}, ok + '/' + r.sources.length + ' 个信源 · ' + (r.llm.configured ? r.llm.model : '未接入 LLM'))),
+      el('h1', {}, el('img', { class: 'mlogo', src: '/logo.svg', alt: '' }), 'AI 作战室'),
+      el('div', { class: 'motto' }, 'The AI & Ethereum Daily'),
+      el('div', { class: 'dateline' },
+        el('span', {}, d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })),
+        el('span', {}, '第 ' + issue + ' 期'),
+        el('span', {}, '截稿 ' + new Date(r.generatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }))),
+      el('nav', { class: 'sections' }, [['#front', '要闻'], ['#official', '官方'], ['#products', '产品'], ['#github', '开源'], ['#podcast', '播客'], ['#eth', '以太坊'], ['#more', '综合']]
+        .map(([h, t]) => el('a', { href: h }, t))),
+      !r.llm.configured && el('p', { class: 'notice' }, '本期未接入 LLM，标题与摘要为原文。')),
+
+    // 头版
+    el('section', { class: 'front', id: 'front' },
+      lead ? el('div', { class: 'lead' },
+        el('div', { class: 'kicker' }, '头条 · TOP STORY'),
+        el('h2', {}, el('a', { href: lead.links[0] && lead.links[0].url }, lead.title)),
+        lead.image && [img(lead.image, 'photo'), el('div', { class: 'cap' }, '图：' + lead.links[0].source)],
+        lead.summary && el('p', { class: 'dek' }, lead.summary),
+        el('div', { class: 'src' }, '来源：', lead.links.map((l) => el('a', { href: l.url }, l.source + (l.points ? ' ' + l.points + ' 分' : ''))))) : el('div', { class: 'empty' }, '今天还没有新闻'),
+      el('aside', { class: 'brief' },
+        el('h3', {}, '要闻速览'),
+        restTop.slice(0, 4).map((n) => el('article', {},
+          el('span', { class: 'no' }, String(n.rank).padStart(2, '0')),
+          el('h4', {}, el('a', { href: n.links[0] && n.links[0].url }, n.title)),
+          n.summary && el('p', {}, clip(n.summary, 70))))),
+      restTop.length > 4 && el('div', { class: 'row3' }, restTop.slice(4, 7).map((n) => el('article', {},
+        img(n.image, 'sm'),
+        el('h4', {}, el('a', { href: n.links[0] && n.links[0].url }, n.title)),
+        n.summary && el('p', {}, clip(n.summary, 110)),
+        el('div', { class: 'src' }, n.links.slice(0, 3).map((l) => el('a', { href: l.url }, l.source))))))),
+
+    desk('official', '官方发布', 'OFFICIAL', 'OpenAI · Anthropic · Google',
+      el('div', { class: 'cols' }, r.official.slice(0, 12).map((it) => story(it, [el('b', {}, it.source), ' · ', ago(it.publishedAt)])))),
+
+    desk('products', '产品', 'PRODUCTS', 'Product Hunt · Show HN · Hugging Face',
+      el('div', { class: 'grid3' },
+        el('div', {}, el('h3', { class: 'boxhead' }, 'PRODUCT HUNT 新品'), r.products.productHunt.slice(0, 8).map((it) => story(it, ago(it.publishedAt), { clip: 60, img: false }))),
+        el('div', {}, el('h3', { class: 'boxhead' }, 'SHOW HN'), r.products.showHn.slice(0, 6).map((it) => story(it, [el('span', { class: 'fig' }, it.metrics.points + ' 分'), ' · ', it.metrics.comments + ' 评论'], { clip: 80, img: false }))),
+        el('div', {}, el('h3', { class: 'boxhead' }, 'HUGGING FACE 热门'),
+          board([...r.products.hfModels.slice(0, 5), ...r.products.hfSpaces.slice(0, 5)], (it) => fmt(it.metrics.trending), '热度', (it) => it.source + (it.metrics.tag ? ' · ' + it.metrics.tag : ''))))),
+
+    desk('github', '开源', 'GITHUB', '按新增 star 排行',
+      el('div', { class: 'grid2' },
+        el('div', {}, el('h3', { class: 'boxhead' }, '今日飙升'), board(r.github.daily.slice(0, 10), (it) => '+' + fmt(it.metrics.gained), '今日 star', sum)),
+        el('div', {}, el('h3', { class: 'boxhead' }, '近 30 天新项目'), board(r.github.fresh.slice(0, 10), (it) => fmt(it.metrics.stars), '总 star', sum)))),
+
+    desk('podcast', '播客', 'PODCAST', '近 7 天 AI 单集，按 YouTube 观看数',
+      el('div', { class: 'cols' }, r.podcasts.episodes.slice(0, 9).map((it) => story(it, [
+        it.metrics.views != null ? [el('span', { class: 'fig' }, fmt(it.metrics.views) + ' 次观看'), ' · '] : null,
+        el('b', {}, it.source), it.metrics.minutes ? ' · ' + it.metrics.minutes + ' 分钟' : '',
+      ], { clip: 120 })))),
+
+    desk('eth', '以太坊', 'ETHEREUM', '协议 · 研究 · 生态',
+      callLead && el('div', { class: 'boxed' },
+        el('div', { class: 'boxhead' }, '核心开发者会议纪要'),
+        el('h4', {}, el('a', { href: callLead.url }, zh(callLead))),
+        el('div', { class: 'meta' }, callLead.source + ' · ' + ago(callLead.publishedAt)),
+        el('ul', {}, bullets(sum(callLead)).slice(0, 6).map((b) => el('li', {}, b))),
+        upcoming.length > 0 && el('div', { class: 'meta', style: 'margin-top:12px' }, '即将召开：', upcoming.map((c, i) => [i ? '；' : '', el('a', { href: c.url }, c.title)]))),
+      el('div', { class: 'grid3' },
+        el('div', {}, el('h3', { class: 'boxhead' }, '生态要闻'), e.top.map((n, i) => el('article', { class: 'story' },
+          i === 0 && img(n.image, 'sm'),
+          el('h4', {}, el('a', { href: n.links[0] && n.links[0].url }, n.title)), n.summary && el('p', {}, clip(n.summary, 100)),
+          el('div', { class: 'by' }, n.links.map((l) => l.source).join(' · '))))),
+        el('div', {}, el('h3', { class: 'boxhead' }, '其他会议'), done.slice(1, 5).map((c) => story(c, [el('span', { class: 'tag blue' }, c.source), ago(c.publishedAt)], { clip: 120, img: false })),
+          el('h3', { class: 'boxhead', style: 'margin-top:8px' }, 'EIP 动态'), e.eips.map((it) => story(it, [el('span', { class: 'tag red' }, it.source), ago(it.publishedAt)], { clip: 90, img: false }))),
+        el('div', {}, el('h3', { class: 'boxhead' }, '研究论坛热帖'), board(e.research.slice(0, 8), (it) => fmt(it.metrics.views), '浏览', (it) => it.source),
+          el('h3', { class: 'boxhead', style: 'margin-top:18px' }, '客户端发布'), e.releases.slice(0, 6).map((it) => story(it, [el('b', {}, it.extra && it.extra.layer), ' · ', ago(it.publishedAt)], { clip: 0, img: false }))))),
+
+    desk('more', '综合', 'MORE NEWS', '其余 AI 新闻',
+      el('div', { class: 'cols' }, r.news.slice(0, 18).map((it) => story(it, [el('b', {}, it.source),
+        it.metrics && it.metrics.points ? [' · ', el('span', { class: 'fig' }, it.metrics.points + ' 分')] : null, ' · ', ago(it.publishedAt)], { clip: 100 })))),
+
+    el('footer', {}, '信源：', r.sources.map((s, i) => [i ? ' · ' : '', el('span', { class: s.ok ? '' : 'bad' }, s.source + (s.ok ? '' : '（失败）'))]),
+      el('br'), '本报由 AI 作战室自动编排 · ', el('b', {}, r.date)),
+  ];
+}
+
+async function load(date, dates) {
+  const r = await (await fetch('/api/report/' + date)).json();
+  document.getElementById('page').replaceChildren(...render(r, dates).flat(3).filter(Boolean));
+}
+(async () => {
+  const dates = await (await fetch('/api/dates')).json();
+  if (!dates.length) {
+    document.getElementById('page').replaceChildren(el('div', { class: 'empty' }, '还没有数据。先在终端运行 npm run collect。'));
+    return;
+  }
+  load(dates[0], dates);
+})();
+</script>
+</body>
+</html>
