@@ -1,6 +1,6 @@
 # AI 作战室
 
-每天采集海外 AI 动态和以太坊协议/生态动态，LLM 过滤、去重并生成中文摘要，可以在本地查看，也会每天自动发布到 GitHub Pages：https://pana.github.io/ai-war-room/
+每天采集海外 AI 动态和以太坊协议/生态动态，LLM 过滤、去重并生成中文摘要，可以在本地查看，也会每天自动发布到 GitHub Pages：http://pana.wang/ai-war-room/
 
 ## 使用
 
