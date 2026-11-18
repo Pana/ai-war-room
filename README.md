@@ -1,6 +1,6 @@
 # AI War Room (AI 作战室)
 
-A daily briefing on what's happening in AI and in the Ethereum protocol and ecosystem. It collects from about 30 sources, uses an LLM to filter for relevance, merge duplicate stories and write Chinese titles and summaries, and serves the result as a web page — locally, and published to GitHub Pages every day: http://pana.wang/ai-war-room/
+A daily briefing on what's happening in AI and in the Ethereum protocol and ecosystem. It collects from about 30 sources, uses an LLM to filter for relevance, merge duplicate stories and write Chinese titles and summaries, and serves the result as a web page — locally, and published to GitHub Pages every day: https://pana.wang/ai-war-room/
 
 ## Getting started
 
