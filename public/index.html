@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI 作战室</title>
-<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 <script>
   // 主题：默认跟随系统，手动切换后记住。放在最前面避免闪烁。
   try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -126,9 +126,9 @@ function el(tag, attrs, ...kids) {
     if (k === 'class') n.className = v;
     else if (k === 'href') {
       if (/^https?:\/\//i.test(v)) { n.href = v; n.target = '_blank'; n.rel = 'noopener noreferrer'; }
-      else if (/^\/(?!\/)/.test(v)) n.href = v; // 站内页面
+      else if (/^\.\//.test(v)) n.href = v; // 站内页面（相对路径）
     }
-    else if (k === 'src') { if (/^https:\/\//i.test(v) || /^\/(?!\/)/.test(v)) n.src = v; }
+    else if (k === 'src') { if (/^https:\/\//i.test(v) || /^[\w-]+\.svg$/.test(v)) n.src = v; }
     else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
     else n.setAttribute(k, v);
   }
@@ -213,12 +213,12 @@ function renderSide() {
   sel.value = report.date;
   const ok = report.sources.filter((s) => s.ok).length;
   document.getElementById('side').replaceChildren(...[
-    el('div', { class: 'brand' }, el('img', { class: 'logo', src: '/logo.svg', alt: '' }), 'AI 作战室',
+    el('div', { class: 'brand' }, el('img', { class: 'logo', src: 'logo.svg', alt: '' }), 'AI 作战室',
       el('button', { class: 'theme', 'aria-label': '切换深色或浅色', title: '切换深色 / 浅色', onclick: toggleTheme }, '◐')),
     sel,
     el('div', { class: 'info' }, '生成于 ' + new Date(report.generatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) +
       ' · ' + ok + '/' + report.sources.length + ' 源' + (report.llm.configured ? ' · ' + report.llm.model : '')),
-    el('a', { class: 'nav view', href: '/daily' }, el('span', { class: 'ic' }, '▤'), '切换到日报视图', el('span', { class: 'ct' }, '→')),
+    el('a', { class: 'nav view', href: './daily.html' }, el('span', { class: 'ic' }, '▤'), '切换到日报视图', el('span', { class: 'ct' }, '→')),
     !report.llm.configured && el('div', { class: 'notice' }, '未接入 LLM，标题与摘要为原文'),
     sections.map((s) => s.grp ? el('div', { class: 'grp' }, s.grp) :
       el('button', { class: 'nav' + (s.id === cur.sec ? ' on' : '') + (s.bad ? ' bad' : ''), onclick: () => select(s.id, 0, true) },
@@ -289,13 +289,13 @@ addEventListener('keydown', (ev) => {
 });
 
 async function load(date) {
-  report = await (await fetch('/api/report/' + date)).json();
+  report = await (await fetch('api/report/' + date + '.json')).json();
   sections = buildSections(report);
   const [s, i] = location.hash.slice(1).split('/');
   select(s || 'top', Number(i) || 0, true);
 }
 (async () => {
-  dates = await (await fetch('/api/dates')).json();
+  dates = await (await fetch('api/dates.json')).json();
   if (!dates.length) {
     document.getElementById('list').replaceChildren(el('div', { class: 'empty' }, '还没有数据。先在终端运行 npm run collect。'));
     return;

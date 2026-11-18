@@ -1,0 +1,84 @@
+# 每天采集一次并发布到 GitHub Pages。
+#
+# 首次使用：
+#   1. Settings → Secrets and variables → Actions 里添加 LLM_BASE_URL、LLM_API_KEY、LLM_MODEL
+#      （可选：Variables 里加 LLM_API_FORMAT，默认 openai）
+#   2. Settings → Pages → Build and deployment → Source 选 "GitHub Actions"
+#   3. Actions 页面手动运行一次 "每日采集"（首次要处理全部内容，约 15 分钟）
+#
+# 数据库（LLM 处理结果、配图缓存、GitHub star 快照）保存在 data 分支，每次运行覆盖，只保留最新一份。
+
+name: 每日采集
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # UTC 00:00 = 北京时间 08:00（GitHub 定时任务可能延迟几分钟到几十分钟）
+  workflow_dispatch:
+
+permissions:
+  contents: write # 把数据库推到 data 分支
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: 取回上次的数据库
+        run: |
+          mkdir -p data
+          if git fetch --depth=1 origin data 2>/dev/null; then
+            git show FETCH_HEAD:ai.db > data/ai.db
+            echo "已取回数据库：$(du -h data/ai.db | cut -f1)"
+          else
+            echo "还没有 data 分支，这是第一次运行"
+          fi
+
+      - name: 采集
+        run: npm run collect
+        env:
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_API_FORMAT: ${{ vars.LLM_API_FORMAT || 'openai' }}
+          GITHUB_TOKEN: ${{ github.token }} # 提高 GitHub 搜索接口的额度
+
+      - name: 导出静态网站
+        run: npm run export
+
+      - name: 保存数据库到 data 分支
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd data
+          git init -q -b data
+          git add ai.db
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "数据库 $(date -u +%F)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v5

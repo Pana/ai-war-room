@@ -7,15 +7,17 @@ import { loadReport, reportDates } from './db.ts';
 const app = new Hono();
 const file = (name: string) => readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8');
 
-// 每次读盘，改页面不用重启。/ 是三栏阅读器，/daily 是日报版面，两者读同一份报告。
+// 每次读盘，改页面不用重启。/ 是三栏阅读器，daily.html 是日报版面，两者读同一份报告。
+// 地址和静态导出（npm run export）保持一致，页面在本地和 GitHub Pages 上用同一套相对路径。
 app.get('/', (c) => c.html(file('index.html')));
-app.get('/daily', (c) => c.html(file('daily.html')));
+app.get('/daily.html', (c) => c.html(file('daily.html')));
+app.get('/daily', (c) => c.redirect('daily.html'));
 app.get('/logo.svg', (c) => c.body(file('logo.svg'), 200, { 'content-type': 'image/svg+xml; charset=utf-8' }));
 
-app.get('/api/dates', (c) => c.json(reportDates()));
+app.get('/api/dates.json', (c) => c.json(reportDates()));
 
-app.get('/api/report/:date', (c) => {
-  const report = loadReport(c.req.param('date'));
+app.get('/api/report/:file', (c) => {
+  const report = loadReport(c.req.param('file').replace(/\.json$/, ''));
   return report ? c.json(report) : c.json({ error: '这一天没有报告' }, 404);
 });
 

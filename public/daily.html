@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI 作战室 · 日报</title>
-<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 <script>
   // 主题：和阅读器视图共用同一个设置
   try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -143,9 +143,9 @@ function el(tag, attrs, ...kids) {
     if (k === 'class') n.className = v;
     else if (k === 'href') {
       if (/^https?:\/\//i.test(v)) { n.href = v; n.target = '_blank'; n.rel = 'noopener noreferrer'; }
-      else if (v[0] === '#' || /^\/(?!\/)/.test(v)) n.href = v;
+      else if (v[0] === '#' || /^\.\//.test(v)) n.href = v; // 页内锚点、站内页面（相对路径）
     }
-    else if (k === 'src') { if (/^https:\/\//i.test(v) || /^\/(?!\/)/.test(v)) n.src = v; }
+    else if (k === 'src') { if (/^https:\/\//i.test(v) || /^[\w-]+\.svg$/.test(v)) n.src = v; }
     else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
     else n.setAttribute(k, v);
   }
@@ -209,10 +209,10 @@ function render(r, dates) {
   return [
     el('header', { class: 'mast' },
       el('div', { class: 'top' },
-        el('a', { class: 'view', href: '/' }, '← 阅读器视图'),
+        el('a', { class: 'view', href: './' }, '← 阅读器视图'),
         el('div', { class: 'tools' }, sel, el('button', { 'aria-label': '切换深色或浅色', title: '切换深色 / 浅色', onclick: toggleTheme }, '◐')),
         el('span', {}, ok + '/' + r.sources.length + ' 个信源 · ' + (r.llm.configured ? r.llm.model : '未接入 LLM'))),
-      el('h1', {}, el('img', { class: 'mlogo', src: '/logo.svg', alt: '' }), 'AI 作战室'),
+      el('h1', {}, el('img', { class: 'mlogo', src: 'logo.svg', alt: '' }), 'AI 作战室'),
       el('div', { class: 'motto' }, 'The AI & Ethereum Daily'),
       el('div', { class: 'dateline' },
         el('span', {}, d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })),
@@ -290,11 +290,11 @@ function render(r, dates) {
 }
 
 async function load(date, dates) {
-  const r = await (await fetch('/api/report/' + date)).json();
+  const r = await (await fetch('api/report/' + date + '.json')).json();
   document.getElementById('page').replaceChildren(...render(r, dates).flat(3).filter(Boolean));
 }
 (async () => {
-  const dates = await (await fetch('/api/dates')).json();
+  const dates = await (await fetch('api/dates.json')).json();
   if (!dates.length) {
     document.getElementById('page').replaceChildren(el('div', { class: 'empty' }, '还没有数据。先在终端运行 npm run collect。'));
     return;
