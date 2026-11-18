@@ -1,52 +1,64 @@
-# AI 作战室
+# AI War Room (AI 作战室)
 
-每天采集海外 AI 动态和以太坊协议/生态动态，LLM 过滤、去重并生成中文摘要，可以在本地查看，也会每天自动发布到 GitHub Pages：http://pana.wang/ai-war-room/
+A daily briefing on what's happening in AI and in the Ethereum protocol and ecosystem. It collects from about 30 sources, uses an LLM to filter for relevance, merge duplicate stories and write Chinese titles and summaries, and serves the result as a web page — locally, and published to GitHub Pages every day: http://pana.wang/ai-war-room/
 
-## 使用
+## Getting started
+
+Requires Node.js 24 or later.
 
 ```bash
 npm install
-cp .env.example .env   # 填 LLM 地址、key、模型名
-npm run collect        # 采集并生成当天报告（约 1～2 分钟）
+cp .env.example .env   # fill in the LLM endpoint, API key and model
+npm run collect        # collect and build today's report
 npm run web            # http://localhost:8787
 ```
 
-不填 `.env` 也能跑，只是没有中文摘要，AI 相关性退化为关键词判断。配好 LLM 后再跑一次，之前没处理的条目会补上。
+The first run with an LLM processes everything and takes about 15 minutes; later runs only process new items and take about 2 minutes.
 
-采集脚本会读取 `HTTPS_PROXY` / `HTTP_PROXY` 环境变量走代理。
+It also runs without an LLM: you get the original English titles and summaries, and relevance falls back to keyword matching. Items left unprocessed are picked up on the next run once the LLM is configured.
 
-## 内容
+The LLM can be any OpenAI-compatible (`/chat/completions`) or Anthropic-format (`/messages`) endpoint; set `LLM_API_FORMAT` accordingly.
 
-| 分类 | 来源 |
+The collector honours the `HTTPS_PROXY` / `HTTP_PROXY` environment variables.
+
+## What it collects
+
+| Section | Sources |
 |---|---|
-| 今日十大 | Techmeme、Hacker News、TechCrunch、The Verge、官方博客，LLM 合并同一事件后排序 |
-| 官方博客 | OpenAI、Anthropic（新闻 + 工程）、Google DeepMind、Google AI |
-| AI 产品 | Product Hunt、Show HN、Hugging Face 热门 Spaces 和模型 |
-| GitHub | Trending 日榜 / 周榜（AI 相关）、近 30 天新建的 AI 项目 |
-| Podcast | Apple / Spotify 科技榜里的 AI 节目 + 精选名单，单集按 YouTube 观看数排序 |
-| 以太坊 | 核心开发者会议 ACDE / ACDC / ACDT（Forkcast 会议要点 + Ethereum Magicians 议程）、Magicians 与 ethresear.ch 本周热帖、EIP 改动、客户端发布、生态新闻（EF Blog、Ethereal news、The Defiant、Decrypt） |
+| Top 10 | Techmeme, Hacker News, TechCrunch, The Verge and the official blogs, with stories about the same event merged and ranked by the LLM |
+| Official blogs | OpenAI, Anthropic (news and engineering), Google DeepMind, Google AI |
+| AI products | Product Hunt, Show HN, trending Hugging Face Spaces and models |
+| GitHub | Trending daily / weekly (AI-related only), and AI projects created in the last 30 days |
+| Podcasts | AI shows from the Apple and Spotify technology charts plus a curated list; episodes ranked by YouTube views |
+| Ethereum | All Core Devs calls ACDE / ACDC / ACDT (Forkcast call notes and Ethereum Magicians agendas), top posts on Ethereum Magicians and ethresear.ch, EIP changes, client releases, ecosystem news (EF Blog, Ethereal news, The Defiant, Decrypt) |
 
-网页有两个视图，读同一份报告，左上角 / 报头可互相切换，深色 / 浅色设置共用：
+News items carry a cover image, taken from the feed or from the article's `og:image`. Only the image URL is stored; the browser loads the image from the original site.
 
-- `/` 三栏阅读器：左侧分类、中间列表、右侧阅读。快捷键 `J` / `K` 上下条，`[` / `]` 切换分类，`O` 打开原文。
-- `daily.html` 日报版面：像报纸一样一页读完。
+Source lists (official blogs, GitHub topics, curated podcasts and their YouTube channels, Ethereum clients and news feeds) live in `src/sources.ts`.
 
-数据源名单（官方博客、GitHub topic、播客精选和 YouTube 频道、以太坊客户端和新闻源）在 `src/sources.ts` 里改。
+## Web views
 
-## 自动发布（GitHub Actions + Pages）
+Both views read the same report and link to each other; the light / dark setting is shared.
 
-`.github/workflows/daily.yml` 每天北京时间 08:00 运行：取回上次的数据库 → 采集 → 导出静态网站（`npm run export`，生成 `site/`）→ 保存数据库 → 发布到 GitHub Pages。
+- `/` — three-pane reader: sections on the left, items in the middle, the article on the right. Keys: `J` / `K` next / previous item, `[` / `]` previous / next section, `O` open the original.
+- `daily.html` — newspaper layout: the whole day on one page.
 
-- 密钥：仓库 Settings → Secrets and variables → Actions 里的 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL`。
-- 数据库：保存在 `data` 分支（只保留最新一份），里面是报告、LLM 处理结果、配图地址缓存和 GitHub star 快照。
-- 网页：每次运行重新发布，只保留最近 60 天的报告（`EXPORT_DAYS` 可调）。
-- 配图：只存图片地址，不下载图片本身，浏览器直接从原网站加载。
-- 手动运行：仓库 Actions 页面选「每日采集」→ Run workflow。
+## Daily publishing (GitHub Actions + Pages)
 
-## 结构
+`.github/workflows/daily.yml` runs every day at 00:00 UTC (08:00 Beijing time): restore the previous database → collect → export a static site (`npm run export`, writes `site/`) → save the database → deploy to GitHub Pages.
 
-- `src/collectors/` 各数据源的采集器，统一输出 `RawItem`
-- `src/pipeline/` LLM 加工：AI 相关性 + 中文摘要（`enrich.ts`）、十大新闻（`topnews.ts`）
-- `src/collect.ts` 采集入口，生成当天报告存入 SQLite（`data/ai.db`）
-- `src/export.ts` 导出静态网站
-- `src/server.ts` + `public/` 网页（`index.html` 阅读器、`daily.html` 日报）
+- **Secrets**: `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_MODEL` under Settings → Secrets and variables → Actions. Optionally set `LLM_API_FORMAT` as a variable (defaults to `openai`).
+- **Pages**: Settings → Pages → Source must be "GitHub Actions".
+- **Database**: kept on the `data` branch, overwritten on each run so only the latest copy is stored. It holds the reports, LLM results, image URL cache and GitHub star snapshots.
+- **Site**: rebuilt on each run with the last 60 days of reports (`EXPORT_DAYS` to change).
+- **Run manually**: Actions → "每日采集" → Run workflow.
+
+To run on your own Mac instead, `scripts/install-schedule.sh` installs a launchd job that runs `scripts/daily.sh` every day (`scripts/install-schedule.sh uninstall` removes it).
+
+## Project layout
+
+- `src/collectors/` — one collector per source, all returning `RawItem`
+- `src/pipeline/` — LLM processing: relevance and Chinese summaries (`enrich.ts`), top stories (`topnews.ts`), cover images (`images.ts`)
+- `src/collect.ts` — entry point; builds the day's report and stores it in SQLite (`data/ai.db`)
+- `src/export.ts` — exports the static site
+- `src/server.ts` + `public/` — local web server and pages (`index.html` reader, `daily.html` newspaper)
