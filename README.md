@@ -45,7 +45,7 @@ Both views read the same report and link to each other; the light / dark setting
 
 ## Daily publishing (GitHub Actions + Pages)
 
-`.github/workflows/daily.yml` runs every day at 00:00 UTC (08:00 Beijing time): restore the previous database → collect → export a static site (`npm run export`, writes `site/`) → save the database → deploy to GitHub Pages.
+`.github/workflows/daily.yml` runs every day at 23:17 UTC (07:17 Beijing time), with a backup run at 01:43 UTC (09:43 Beijing time) because GitHub can delay or drop scheduled runs at busy times. Each run: restore the previous database → collect → export a static site (`npm run export`, writes `site/`) → save the database → deploy to GitHub Pages.
 
 - **Secrets**: `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_MODEL` under Settings → Secrets and variables → Actions. Optionally set `LLM_API_FORMAT` as a variable (defaults to `openai`).
 - **Pages**: Settings → Pages → Source must be "GitHub Actions".
