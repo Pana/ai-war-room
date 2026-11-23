@@ -35,6 +35,10 @@
   .brand .logo { width: 28px; height: 28px; border-radius: 7px; display: block; }
   .nav.view { margin-top: 2px; color: var(--accent); }
   .theme { margin-left: auto; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--read); cursor: pointer; font-size: 13px; }
+  .side .dyn { display: contents; }
+  .search { width: 100%; margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--read); font: inherit; font-size: 14px; color: inherit; }
+  .search::placeholder { color: var(--muted); }
+  mark { background: color-mix(in srgb, #facc15 45%, transparent); color: inherit; border-radius: 2px; }
   .side select { width: 100%; margin: 0 0 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--read); }
   .side .info { padding: 0 8px 10px; font-size: 12px; color: var(--muted); }
   .grp { margin: 14px 8px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
@@ -101,6 +105,7 @@
     .side { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--line); }
     .side .brand, .side .info, .side .grp, .side .notice { display: none; }
     .side select { width: auto; margin: 0; flex: none; }
+    .side .search { width: 150px; margin: 0; flex: none; }
     .nav { width: auto; flex: none; white-space: nowrap; }
     .nav .ic { display: none; }
     .list { border-right: 0; overflow: visible; }
@@ -114,7 +119,12 @@
 </head>
 <body>
 <div class="app">
-  <aside class="side" id="side"></aside>
+  <aside class="side">
+    <div class="brand"><img class="logo" src="logo.svg" alt="">AI 作战室<button class="theme" aria-label="切换深色或浅色" title="切换深色 / 浅色" onclick="toggleTheme()">◐</button></div>
+    <!-- 搜索框不随侧栏重绘，否则输入时会丢焦点 -->
+    <input class="search" id="q" type="search" placeholder="搜索近期报告　/" aria-label="搜索近期报告" autocomplete="off" spellcheck="false">
+    <div class="dyn" id="side"></div>
+  </aside>
   <section class="list" id="list"></section>
   <section class="read" id="read"></section>
 </div>
@@ -213,8 +223,6 @@ function renderSide() {
   sel.value = report.date;
   const ok = report.sources.filter((s) => s.ok).length;
   document.getElementById('side').replaceChildren(...[
-    el('div', { class: 'brand' }, el('img', { class: 'logo', src: 'logo.svg', alt: '' }), 'AI 作战室',
-      el('button', { class: 'theme', 'aria-label': '切换深色或浅色', title: '切换深色 / 浅色', onclick: toggleTheme }, '◐')),
     sel,
     el('div', { class: 'info' }, '生成于 ' + new Date(report.generatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) +
       ' · ' + ok + '/' + report.sources.length + ' 源' + (report.llm.configured ? ' · ' + report.llm.model : '')),
@@ -228,38 +236,41 @@ function renderSide() {
 function renderList(sec) {
   const list = document.getElementById('list');
   list.replaceChildren(...[
-    el('div', { class: 'lhead' }, el('h2', {}, sec.name), el('p', {}, sec.desc + ' · ' + sec.items.length + ' 条')),
+    el('div', { class: 'lhead' }, el('h2', {}, sec.name), el('p', {}, sec.desc + (sec.loading ? '' : ' · ' + sec.items.length + ' 条'))),
     sec.items.length ? sec.items.map((x, i) => el('button', { class: 'it' + (i === cur.idx ? ' on' : ''), 'data-i': i, onclick: () => select(sec.id, i, false, true) },
       x.rank != null && el('span', { class: 'rk' }, String(x.rank)),
       img(x.image, 'th'),
-      el('div', { class: 'bd' }, el('div', { class: 'tt' }, x.title), el('div', { class: 'mt' }, [x.source, ago(x.when)].filter(Boolean).join(' · '))),
-      x.metric && el('div', { class: 'mv' }, x.metric.v, el('small', {}, x.metric.l)))) : el('div', { class: 'empty' }, '今天没有内容')].flat(3).filter(Boolean));
+      el('div', { class: 'bd' }, el('div', { class: 'tt' }, hl(x.title, sec.terms)), el('div', { class: 'mt' }, x.meta || [x.source, ago(x.when)].filter(Boolean).join(' · '))),
+      x.metric && el('div', { class: 'mv' }, x.metric.v, el('small', {}, x.metric.l)))) : el('div', { class: 'empty' }, sec.emptyText || '今天没有内容')].flat(3).filter(Boolean));
 }
 
 function renderReader(sec) {
   const x = sec.items[cur.idx];
   const read = document.getElementById('read');
-  if (!x) { read.replaceChildren(el('div', { class: 'empty' }, '这个分类今天没有内容')); return; }
+  if (!x) { read.replaceChildren(el('div', { class: 'empty' }, sec.search ? '' : '这个分类今天没有内容')); return; }
   read.replaceChildren(el('article', { class: 'article' },
     el('button', { class: 'btn back', onclick: () => document.body.classList.remove('reading') }, '← 返回列表'),
     img(x.image, 'hero'),
-    el('div', { class: 'kick' + (x.eth ? ' eth' : '') }, sec.name + (x.source ? ' · ' + x.source : '')),
-    el('h1', {}, x.title),
+    el('div', { class: 'kick' + (x.eth ? ' eth' : '') }, (x.kick || sec.name) + (x.source ? ' · ' + x.source : '')),
+    el('h1', {}, hl(x.title, sec.terms)),
     x.orig && el('div', { class: 'orig' }, x.orig),
     x.when && el('div', { class: 'when' }, new Date(x.when).toLocaleString('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) + ' · ' + ago(x.when)),
-    x.summary && el('div', { class: 'body' }, x.summary),
+    x.summary && el('div', { class: 'body' }, hl(x.summary, sec.terms)),
     (x.chips.length || x.metric) && el('div', { class: 'chips' }, x.metric && el('span', { class: 'chip' }, x.metric.v + ' ' + x.metric.l), x.chips.map((c) => el('span', { class: 'chip' }, c))),
     el('div', { class: 'actions' },
       x.url && el('a', { class: 'btn primary', href: x.url }, '阅读原文 ↗'),
+      x.hit && el('button', { class: 'btn', onclick: () => openInReport(x.hit) }, '在 ' + x.hit.d + ' 的报告中查看'),
       (x.extraLinks || []).filter((l) => l[1]).map((l) => el('a', { class: 'btn', href: l[1] }, l[0] + ' ↗'))),
     x.links && x.links.length > 1 && el('div', { class: 'rel' }, el('h3', {}, '相关报道 · ' + x.links.length + ' 篇'),
       x.links.map((l) => el('a', { href: l.url }, el('b', {}, l.source + (l.points ? ' · ' + l.points + ' 分' : '')), l.title))),
-    el('div', { class: 'hint' }, el('kbd', {}, 'J'), ' / ', el('kbd', {}, 'K'), ' 下一条 / 上一条　', el('kbd', {}, 'O'), ' 打开原文　', el('kbd', {}, '[ ]'), ' 切换分类')));
+    el('div', { class: 'hint' }, el('kbd', {}, 'J'), ' / ', el('kbd', {}, 'K'), ' 下一条 / 上一条　', el('kbd', {}, 'O'), ' 打开原文　', el('kbd', {}, '[ ]'), ' 切换分类　', el('kbd', {}, '/'), ' 搜索')));
   read.scrollTop = 0;
 }
 
+const secById = (id) => (id === 'search' && searchSec) || sections.find((s) => s.id === id);
+
 function select(secId, idx, fromNav, open) {
-  const sec = sections.find((s) => s.id === secId) || sections.find((s) => s.id);
+  const sec = secById(secId) || sections.find((s) => s.id);
   cur = { sec: sec.id, idx: Math.max(0, Math.min(idx, sec.items.length - 1)) };
   history.replaceState(null, '', location.search + '#' + cur.sec + '/' + cur.idx);
   renderSide(); renderList(sec); renderReader(sec);
@@ -279,21 +290,108 @@ function toggleTheme() {
 addEventListener('keydown', (ev) => {
   if (!report || ev.metaKey || ev.ctrlKey || ev.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
   const navs = sections.filter((s) => s.id);
-  const sec = navs.find((s) => s.id === cur.sec);
+  const sec = secById(cur.sec);
   const k = ev.key.toLowerCase();
-  if (k === 'j' || ev.key === 'ArrowDown') { ev.preventDefault(); select(cur.sec, cur.idx + 1); }
+  if (ev.key === '/') { ev.preventDefault(); qBox.focus(); qBox.select(); }
+  else if (k === 'j' || ev.key === 'ArrowDown') { ev.preventDefault(); select(cur.sec, cur.idx + 1); }
   else if (k === 'k' || ev.key === 'ArrowUp') { ev.preventDefault(); select(cur.sec, cur.idx - 1); }
   else if (k === ']' || k === '[') { const i = navs.indexOf(sec) + (k === ']' ? 1 : -1); select(navs[(i + navs.length) % navs.length].id, 0, true); }
   else if (k === 'o') { const x = sec.items[cur.idx]; if (x && x.url) window.open(x.url, '_blank', 'noopener'); }
   else if (ev.key === 'Escape') document.body.classList.remove('reading');
 });
 
-async function load(date) {
+async function load(date, secId, idx) {
   report = await (await fetch('api/report/' + date + '.json')).json();
   sections = buildSections(report);
-  const [s, i] = location.hash.slice(1).split('/');
-  select(s || 'top', Number(i) || 0, true);
+  if (secId == null) { const [s, i] = location.hash.slice(1).split('/'); secId = s || 'top'; idx = Number(i) || 0; }
+  select(secId, idx, true);
 }
+
+/* ---------- 搜索：在浏览器里搜 api/search.json（近期报告里出现过的条目） ---------- */
+const qBox = document.getElementById('q');
+let searchIndex, searchLoading, searchSec = null, beforeSearch = null, qTimer;
+
+function ensureIndex() {
+  if (searchIndex) return Promise.resolve(searchIndex);
+  searchLoading = searchLoading || fetch('api/search.json')
+    .then((res) => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+    .then((list) => (searchIndex = list.map((e) => ({ e,
+      head: [e.t, e.o].filter(Boolean).join('\n').toLowerCase(),
+      all: [e.t, e.o, e.s, e.src, e.x].filter(Boolean).join('\n').toLowerCase() }))))
+    .catch((err) => { searchLoading = null; throw err; });
+  return searchLoading;
+}
+
+// 每个词都要出现（标题、原标题、摘要、来源任一处）；标题里命中的排前面，同分按报告日期从新到旧
+function runSearch(terms) {
+  const hits = [];
+  for (const r of searchIndex) {
+    let score = 0;
+    for (const t of terms) {
+      if (r.head.includes(t)) score += 3; else if (r.all.includes(t)) score += 1; else { score = 0; break; }
+    }
+    if (score) hits.push([score, r.e]);
+  }
+  hits.sort((a, b) => b[0] - a[0] || b[1].d.localeCompare(a[1].d) || (b[1].w || '').localeCompare(a[1].w || ''));
+  return hits.map((h) => h[1]);
+}
+
+const ETH_SECS = ['etop', 'calls', 'research', 'eips', 'rel', 'enews'];
+const secName = (id) => (sections.find((s) => s.id === id) || {}).name || id;
+function fromHit(e) {
+  return { title: e.t, orig: e.o, summary: e.s, url: e.u, source: e.src, when: e.w, image: e.img, eth: ETH_SECS.includes(e.sec),
+    kick: secName(e.sec), meta: [e.d, secName(e.sec), e.src].join(' · '), chips: ['出自 ' + e.d + ' 的报告'], hit: e };
+}
+
+function hl(text, terms) {
+  if (!terms || !terms.length || !text) return text;
+  const re = new RegExp('(' + terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'gi');
+  return text.split(re).map((p, i) => (i % 2 ? el('mark', {}, p) : p));
+}
+
+const MAX_HITS = 200;
+async function setQuery(raw) {
+  const q = raw.trim();
+  if (!q) {
+    if (!searchSec) return;
+    searchSec = null;
+    const b = beforeSearch || { sec: 'top', idx: 0 };
+    beforeSearch = null;
+    select(b.sec, b.idx, true);
+    return;
+  }
+  if (!searchSec) beforeSearch = cur;
+  const name = '搜索「' + q + '」';
+  if (!searchIndex) {
+    searchSec = { id: 'search', search: true, name, desc: '正在加载搜索索引…', loading: true, items: [], emptyText: ' ' };
+    select('search', 0, true);
+    try { await ensureIndex(); } catch (err) {
+      if (qBox.value.trim() !== q) return;
+      searchSec = { ...searchSec, desc: '搜索索引加载失败：' + err.message, emptyText: '稍后再试' };
+      select('search', 0, true);
+      return;
+    }
+    if (qBox.value.trim() !== q) return; // 加载期间输入又变了
+  }
+  const terms = [...new Set(q.toLowerCase().split(/\s+/).filter(Boolean))];
+  const hits = runSearch(terms);
+  searchSec = { id: 'search', search: true, name, terms, items: hits.slice(0, MAX_HITS).map(fromHit),
+    desc: '近期报告' + (hits.length > MAX_HITS ? ' · 共 ' + hits.length + ' 条匹配，只显示最相关的 ' + MAX_HITS : ''),
+    emptyText: '没有找到相关内容，换个词试试' };
+  select('search', 0, true);
+}
+
+function openInReport(e) {
+  qBox.value = ''; searchSec = null; beforeSearch = null;
+  load(e.d, e.sec, e.i);
+}
+
+qBox.addEventListener('focus', () => ensureIndex().catch(() => {}));
+qBox.addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(() => setQuery(qBox.value), 150); });
+qBox.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') { ev.preventDefault(); clearTimeout(qTimer); qBox.value = ''; setQuery(''); qBox.blur(); }
+  else if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); clearTimeout(qTimer); setQuery(qBox.value).then(() => qBox.blur()); }
+});
 (async () => {
   dates = await (await fetch('api/dates.json')).json();
   if (!dates.length) {

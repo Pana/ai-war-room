@@ -4,6 +4,8 @@ export const config = {
   dbPath: env.DB_PATH || 'data/ai.db',
   port: Number(env.PORT || 8787),
   tz: env.REPORT_TZ || 'Asia/Shanghai',
+  /** 静态导出保留几天的报告；搜索也只搜这几天。 */
+  exportDays: Number(env.EXPORT_DAYS || 60),
   githubToken: env.GITHUB_TOKEN || undefined,
   llm: {
     baseUrl: (env.LLM_BASE_URL || '').replace(/\/+$/, ''),

@@ -40,7 +40,8 @@ Source lists (official blogs, GitHub topics, curated podcasts and their YouTube 
 
 Both views read the same report and link to each other; the light / dark setting is shared.
 
-- `/` — three-pane reader: sections on the left, items in the middle, the article on the right. Keys: `J` / `K` next / previous item, `[` / `]` previous / next section, `O` open the original.
+- `/` — three-pane reader: sections on the left, items in the middle, the article on the right. Keys: `J` / `K` next / previous item, `[` / `]` previous / next section, `O` open the original, `/` search.
+- Search (in the reader's sidebar) covers every item shown in the last 60 days of reports — titles, original titles, summaries and sources; separate words must all match. It runs in the browser against `api/search.json`, built from the database by the local server and by `npm run export`, so it works the same on GitHub Pages.
 - `daily.html` — newspaper layout: the whole day on one page.
 
 ## Daily publishing (GitHub Actions + Pages)
@@ -50,7 +51,7 @@ Both views read the same report and link to each other; the light / dark setting
 - **Secrets**: `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_MODEL` under Settings → Secrets and variables → Actions. Optionally set `LLM_API_FORMAT` as a variable (defaults to `openai`).
 - **Pages**: Settings → Pages → Source must be "GitHub Actions".
 - **Database**: kept on the `data` branch, overwritten on each run so only the latest copy is stored. It holds the reports, LLM results, image URL cache and GitHub star snapshots.
-- **Site**: rebuilt on each run with the last 60 days of reports (`EXPORT_DAYS` to change).
+- **Site**: rebuilt on each run with the last 60 days of reports and their search index (`EXPORT_DAYS` to change).
 - **Run manually**: Actions → "每日采集" → Run workflow.
 
 To run on your own Mac instead, `scripts/install-schedule.sh` installs a launchd job that runs `scripts/daily.sh` every day (`scripts/install-schedule.sh uninstall` removes it).
@@ -60,5 +61,6 @@ To run on your own Mac instead, `scripts/install-schedule.sh` installs a launchd
 - `src/collectors/` — one collector per source, all returning `RawItem`
 - `src/pipeline/` — LLM processing: relevance and Chinese summaries (`enrich.ts`), top stories (`topnews.ts`), cover images (`images.ts`)
 - `src/collect.ts` — entry point; builds the day's report and stores it in SQLite (`data/ai.db`)
+- `src/search.ts` — builds the search index from recent reports
 - `src/export.ts` — exports the static site
 - `src/server.ts` + `public/` — local web server and pages (`index.html` reader, `daily.html` newspaper)

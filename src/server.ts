@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { config } from './config.ts';
 import { loadReport, reportDates } from './db.ts';
+import { buildSearchIndex } from './search.ts';
 
 const app = new Hono();
 const file = (name: string) => readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8');
@@ -15,6 +16,9 @@ app.get('/daily', (c) => c.redirect('daily.html'));
 app.get('/logo.svg', (c) => c.body(file('logo.svg'), 200, { 'content-type': 'image/svg+xml; charset=utf-8' }));
 
 app.get('/api/dates.json', (c) => c.json(reportDates()));
+
+// 和静态导出的 api/search.json 内容一致；本地每次现算，采集完不用重启
+app.get('/api/search.json', (c) => c.json(buildSearchIndex(config.exportDays)));
 
 app.get('/api/report/:file', (c) => {
   const report = loadReport(c.req.param('file').replace(/\.json$/, ''));
