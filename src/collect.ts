@@ -1,5 +1,5 @@
 import { config, daysAgo, hoursAgo, reportDate } from './config.ts';
-import { earlierSnapshot, saveReport, saveSnapshot, upsertItems } from './db.ts';
+import { earlierSnapshot, saveReport, saveSnapshot, shownNewsUrls, upsertItems } from './db.ts';
 import { llmConfigured, llmErrors } from './lib/llm.ts';
 import { runSource, statuses } from './lib/run.ts';
 import { hackerNews, showHn, techcrunch, techmeme, theVerge } from './collectors/news.ts';
@@ -112,20 +112,26 @@ await enrichItems(
   '这条新闻是否与以太坊生态相关（以太坊协议与升级、L2、以太坊上的 DeFi 与重要项目、质押、安全事件、ETH 相关的监管与机构动向）；泛加密行情、比特币或其他公链的新闻为 false',
   (it) => looksEth(`${it.title} ${it.text ?? ''}`),
 );
-const ecoNews = ecoItems.filter((it) => it.ai).sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
+// 前几天报告里已经出现过的新闻不再放进今天的要闻和新闻列表（官方博客、榜单类栏目不受影响）。
+// 回看 14 天，覆盖所有新闻源里最长的时间窗口（以太坊基金会博客等）。
+const shownBefore = shownNewsUrls(date, daysAgo(14).toISOString().slice(0, 10));
+const unseen = (it: Item) => !shownBefore.has(it.url);
+
+const ecoNews = ecoItems.filter((it) => it.ai && unseen(it)).sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
 
 // ---------- 5. 生成报告 ----------
 console.log('\n[5/5] 生成报告');
 const since36h = hoursAgo(36).toISOString();
 const isRecent = (it: Item) => !it.publishedAt || it.publishedAt >= since36h;
-const aiNews = news.filter((it) => it.ai).sort((a, b) => newsScore(b) - newsScore(a));
+const aiNews = news.filter((it) => it.ai && unseen(it)).sort((a, b) => newsScore(b) - newsScore(a));
 // 配图：新闻优先用原文封面图；官方博客和以太坊新闻的订阅源自带图就够用，缺图的才去原文页面取
 await attachImages(aiNews.slice(0, 60));
 await attachImages([...official.slice(0, 40), ...ecoNews.slice(0, 40)], false);
 const topNews = await buildTopNews([
   ...aiNews.filter(isRecent),
-  ...official.filter((it) => it.publishedAt && it.publishedAt >= since36h),
+  ...official.filter((it) => unseen(it) && it.publishedAt && it.publishedAt >= since36h),
 ]);
+console.log(`  前几天报告里的新闻链接 ${shownBefore.size} 个，已从今天的要闻和新闻里排除`);
 
 const since48h = hoursAgo(48).toISOString();
 const ethTop = await buildTopNews(

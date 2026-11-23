@@ -108,6 +108,22 @@ export function loadReport(date: string): Report | undefined {
   const row = db.prepare('SELECT payload FROM reports WHERE date = ?').get(date) as { payload: string } | undefined;
   return row ? (JSON.parse(row.payload) as Report) : undefined;
 }
+/**
+ * [since, before) 这几天的报告里已经展示过的新闻链接（要闻、新闻列表、以太坊要闻和新闻），
+ * 用来让当天的报告不再重复前几天的内容。不含 before 当天，所以同一天重跑不受影响。
+ */
+export function shownNewsUrls(before: string, since: string): Set<string> {
+  const rows = db
+    .prepare('SELECT payload FROM reports WHERE date < ? AND date >= ?')
+    .all(before, since) as { payload: string }[];
+  const urls = new Set<string>();
+  for (const { payload } of rows) {
+    const r = JSON.parse(payload) as Report;
+    for (const e of [...r.topNews, ...(r.ethereum?.top ?? [])]) for (const l of e.links) urls.add(l.url);
+    for (const it of [...r.news, ...(r.ethereum?.news ?? [])]) urls.add(it.url);
+  }
+  return urls;
+}
 export function reportDates(): string[] {
   return (db.prepare('SELECT date FROM reports ORDER BY date DESC').all() as { date: string }[]).map((r) => r.date);
 }
