@@ -31,9 +31,6 @@ jobs:
   collect:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -83,5 +80,16 @@ jobs:
         with:
           path: site
 
+  # 发布单独成一个 job：
+  # - 刚上传的 artifact 要过几秒才能被查到，同一个 job 里紧接着发布会报 "No artifacts named github-pages"
+  # - 发布失败时 "Re-run failed jobs" 只重跑这一步，不会重复采集、也不会上传出第二个同名 artifact
+  deploy:
+    needs: collect
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v5
