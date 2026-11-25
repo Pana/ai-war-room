@@ -250,7 +250,7 @@ function render(r, dates) {
         el('div', {}, el('h3', { class: 'boxhead' }, 'PRODUCT HUNT 新品'), r.products.productHunt.slice(0, 8).map((it) => story(it, ago(it.publishedAt), { clip: 60, img: false }))),
         el('div', {}, el('h3', { class: 'boxhead' }, 'SHOW HN'), r.products.showHn.slice(0, 6).map((it) => story(it, [el('span', { class: 'fig' }, it.metrics.points + ' 分'), ' · ', it.metrics.comments + ' 评论'], { clip: 80, img: false }))),
         el('div', {}, el('h3', { class: 'boxhead' }, 'HUGGING FACE 热门'),
-          board([...r.products.hfModels.slice(0, 5), ...r.products.hfSpaces.slice(0, 5)], (it) => fmt(it.metrics.trending), '热度', (it) => it.source + (it.metrics.tag ? ' · ' + it.metrics.tag : ''))))),
+          board([...r.products.hfModels.slice(0, 5), ...r.products.hfSpaces.slice(0, 5)], (it) => fmt(it.metrics.trending), '热度', (it) => [it.source, it.metrics.tag].filter(Boolean).join(' · ') + (sum(it) ? ' — ' + clip(sum(it), 60) : ''))))),
 
     desk('github', '开源', 'GITHUB', '按新增 star 排行',
       el('div', { class: 'grid2' },

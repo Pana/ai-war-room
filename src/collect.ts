@@ -64,8 +64,12 @@ await enrichItems(
   [...daily, ...weekly, ...fresh],
   '这个 GitHub 仓库是否与 AI 相关（LLM、Agent、模型训练与推理、AI 应用与开发工具、MCP、提示词或技能集合等）',
 );
-// Hugging Face 上的本来就是模型和 Demo，不需要判断
-for (const it of [...hfSpaceItems, ...hfModelItems]) it.ai = true;
+// Hugging Face 上的本来就是模型和 Demo，不需要判断 AI 相关性，只补中文标题和摘要
+await enrichItems(
+  [...hfSpaceItems, ...hfModelItems],
+  'Hugging Face 上的热门模型或 Space（Demo 应用），ai 一律为 true。title_zh 保留原仓库名，可在后面用括号补一句中文说明它是什么',
+  () => true,
+);
 
 // GitHub star 快照：存下今天的数，并用历史快照算自己的增量
 const snapSince = daysAgo(8).toISOString().slice(0, 10);
